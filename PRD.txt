@@ -149,7 +149,7 @@ The system consists of these primary components:
 
 - **Framework**: Next.js (React)
 - Provides SSR capabilities
-- Free deployment on Vercel
+- Free deployment on Vercel or any other
 - **UI Components**:
 - Tailwind CSS (utility-first, minimal bundle size)
 - Headless UI (accessible components)
@@ -173,7 +173,7 @@ The system consists of these primary components:
     - Structured question papers
     - Standard tier with infrequent access
     - Estimated storage: ~5GB/month
-- **Database**: MySQL (AWS RDS t3.micro)
+- **Database**: Postgresql/mysql (AWS RDS t3.micro)
     - Single AZ for MVP
     - 20GB storage
     - Automated backups

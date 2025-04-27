@@ -1,6 +1,7 @@
 ---
 description: Optimizes performance in FastAPI APIs by using async functions, caching, and other techniques.
 globs: **/api/**/*.py
+alwaysApply: false
 ---
 - Optimize for performance using async functions for I/O-bound tasks, caching strategies, and lazy loading.
 - Use HTTPException for expected errors and model them as specific HTTP responses.
