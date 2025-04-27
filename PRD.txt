@@ -1,0 +1,448 @@
+
+
+# Visbility MVP 
+
+## 1. Executive Summary | Intro 
+
+- Enables a teacher to upload a quiz pdf they created, the application converts it into an interactive test and let's the teacher share this to the students who can take the test and the teacher can keep track. 
+- This solves the visibility and tracking problem for the teachers 
+
+## System Architecture: Interactive Quiz Generator 
+
+### 1. Component Overview 
+
+The system consists of these primary components: 
+
+1. **PDF Processing Engine** 
+    - Handles Quiz PDF uploads and extraction. 
+        - This is directly done using multi midal LLms like gpt-4o 
+        - The response is extracted as a pydantic model 
+    - Processes document metadata. 
+    - Converts Quiz PDF content to structured question paper pydantic model. 
+
+2. **Question Analysis Service** 
+    - Adds meta information to questions like the difficulty level, topics, subtopics. 
+        - Uses LLMs to do so. Prompt chainining kind of format should be enough. simple use case. 
+    - Has option to Adds AI generated correct answer if not yet present for any question. we should be able to track later if the answer was entered by the teacher or is ai generated. THis is configurable 
+        - again we will use LLM for this. 
+    
+3. **Quiz Builder** 
+    - Creates interactive quiz formats from PDF quizes | 1 PDF quiz = 1 interactive quiz 
+    - Handles quiz customization options | created quiz should be editable by the teacher 
+    - Manages quiz properties (timing, grading, etc.) 
+    - This should result in the final interactive quiz artifact for a particular Quiz PDF for which structured quiz has been extracted by Question Analysis Servic and PDF Processing Engine 
+
+4. **Storage Layer** 
+    - S3 bucket for PDF and strcutured question paper storage | raw input and intermediate steps output will be saved here. 
+    - mysql Database for metadata and mappings 
+        The metadata entered by the teacher while uploading the pdf and the timestamp should be lin ked with the PDF and the artifacts generated later 
+    - Content repository for generated quizzes 
+        As per requrements 
+
+5. **Analytics engine** 
+    - powers analytics over submitted quizzes to the teacher 
+    - given a student -> should be able to provide a detailed analysis and breakdown of quiz attempts scores, across various parameters like subject, topics, subtopics, difficulty levels 
+    - the agenda is that the teacher should be able to derive the insight of where does the student's problems lie 
+
+6. **User Interface** 
+    - Quiz creation dashboard 
+        - Uses PDF Processing Engine and Question Analysis Service 
+    - Quiz taking interface 
+    - Results visualization dashboard 
+
+## 4. Functional Specifications 
+
+- Core features and capabilities 
+    - PDF Quiz → Interactive quiz:  Upload pdf of quiz and get a sharable link to an interactive quiz 
+    - Taking the Quiz: The quiz can be taken by the students |. for now only MCQ questions 
+    - when the student submits the quiz the teacher should be able to see in a dashboard the submitted responses 
+    - The teach should be able to analyze over time performance of each student and a group of students too. 
+- User workflows 
+    
+    **PDF Quiz → Interactive Quiz (with Answer & Metadata Entry)** 
+    
+    **User:** Teacher 
+    
+    **Workflow:** 
+    
+    1. Teacher logs into the Quiz Creation Dashboard. 
+    2. Teacher clicks "Create New Quiz" and uploads a PDF containing the quiz. 
+    3. **Teacher is required to fill in the following metadata before proceeding:** 
+        - Standard (e.g., Grade 10) 
+        - Subject (e.g., Mathematics) 
+        - Target Exam (e.g., JEE, CBSE Board) 
+        - Student Batch Name (e.g., Batch A, 2024) 
+        - Topics (e.g., Algebra) 
+    3. System processes the PDF, extracting questions, any ticked answers, and metadata if present. 
+        Metadata already entered by the user should be overwritten from the deteced ones: so a priority thing should be there 
+    4. Teacher reviews the extracted questions and answers: 
+        - If answers are missing or incorrect, teacher can manually enter or correct them. 
+    5. Teacher customizes quiz properties (timing, grading, etc.) and saves the quiz. 
+    6. System generates a unique, shareable link for the interactive quiz. 
+    7. Teacher shares the link with students. 
+    ---
+    
+    ## **2. Taking the Quiz** 
+    
+    **User:** Student 
+    
+    **Workflow:** 
+    1. Student receives the quiz link from the teacher. 
+    1. Student opens the link and logs in (or enters their name/ID if no login). 
+    1. Student reads instructions and starts the quiz. 
+    1. Student answers MCQ questions within the allotted time. 
+    1. Student submits the quiz. 
+    1. System confirms submission and optionally shows a completion message. 
+    ---
+    
+    ## **3. Teacher Dashboard: Viewing Submissions** 
+    
+    **User:** Teacher 
+    
+    **Workflow:** 
+    1. Teacher logs into the dashboard. 
+    2. There should be a dashboard that can be used for filtering from all the quizzes that the user has created. Filtering should be available on all the metadata fiields that the user enters for all quizzes during creating the quiz and the date
+    3. Teacher selects the relevant quiz from their list (metadata is visible for easy identification). 
+    4. Teacher views a list of all student submissions for that quiz, this should show, students with which it was shared, students which have submitted and students which have not submitted.
+    5. Teacher can click on a student to see their individual responses and scores. 
+    6. Teacher can download/export results if needed. [optional functionality]
+    
+    ---
+    
+    ## **4. Performance Analysis (Individual & Group)**
+    
+    **User:** Teacher
+    
+    **Workflow:**
+    
+    1. Teacher accesses the "Analytics" or "Results Visualization" section.
+    2. Teacher selects a quiz or a group of students (can filter by metadata: standard, subject, batch, etc.).
+    3. System displays performance metrics:
+    - Individual student scores and progress over time.
+    - Group averages, trends, and comparisons.
+    - Breakdown by question/topic/difficulty.
+    1. Teacher can filter, sort, and export analytics data.
+    
+    ---
+    
+    ## **5. Quiz Editing**
+    
+    **User:** Teacher
+    
+    **Workflow:** 
+    1. Whenever a quiz is created for the uploaded quiz for the user, the interactive quiz created should open up in a edit window before being saved. 
+    2. Teacher can select any existing quiz from their dashboard 
+        The quizzes that have been shared with the students can be edited too  but first the teacher should see a warning as : this quiz is already shared. 
+    3. Teacher clicks "Edit Quiz." 
+    4. Teacher modifies questions, answers, quiz properties, or metadata as needed. 
+    5. Teacher saves changes. 
+    6. System updates the interactive quiz and notifies students if required. 
+    
+
+- Integration points with other systems
+
+## **5. Technical Specifications**
+
+**5.1 Component Breakdown**
+
+### Frontend
+
+- **Framework**: Next.js (React)
+- Provides SSR capabilities
+- Free deployment on Vercel
+- **UI Components**:
+- Tailwind CSS (utility-first, minimal bundle size)
+- Headless UI (accessible components)
+- **State Management**:
+- React Query (for API data caching)
+- Local storage for user preferences
+
+### Backend
+
+- **Framework**: FastAPI
+- **Server**: Uvicorn
+- **Architecture Note**: A dedicated service/module will encapsulate all interactions with external Large Language Models (LLMs) to ensure separation of concerns, centralized configuration, and improved maintainability/testability.
+- **Deployment**:
+- Docker container
+- AWS EC2 t2.micro (free tier eligible)
+
+### Storage
+
+- **S3 Storage**:
+    - PDFs storage
+    - Structured question papers
+    - Standard tier with infrequent access
+    - Estimated storage: ~5GB/month
+- **Database**: MySQL (AWS RDS t3.micro)
+    - Single AZ for MVP
+    - 20GB storage
+    - Automated backups
+
+**5.2 Database Schema**
+
+```sql
+-- User Management
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('teacher', 'student') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP
+);
+
+-- Quiz Metadata
+CREATE TABLE quizzes (
+    id UUID PRIMARY KEY,
+    teacher_id UUID REFERENCES users(id),
+    title VARCHAR(255) NOT NULL,
+    standard VARCHAR(50) NOT NULL,
+    subject VARCHAR(100) NOT NULL,
+    target_exam VARCHAR(100) NOT NULL,
+    batch_name VARCHAR(100) NOT NULL,
+    topic VARCHAR(100) NOT NULL,
+    pdf_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    duration_minutes INTEGER DEFAULT 60
+);
+
+-- Questions
+CREATE TABLE questions (
+    id UUID PRIMARY KEY,
+    quiz_id UUID REFERENCES quizzes(id),
+    question_text TEXT NOT NULL,
+    correct_answer TEXT NOT NULL,
+    is_ai_generated BOOLEAN DEFAULT FALSE,
+    options JSON NOT NULL, -- stores MCQ options
+    order_index INTEGER NOT NULL,
+    difficulty VARCHAR(50), -- Added for analytics
+    topic VARCHAR(100),      -- Added for analytics
+    subtopic VARCHAR(100)    -- Added for analytics
+);
+
+-- Student Responses
+CREATE TABLE quiz_attempts (
+    id UUID PRIMARY KEY,
+    student_id UUID REFERENCES users(id),
+    quiz_id UUID REFERENCES quizzes(id),
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP,
+    score DECIMAL(5,2),
+    UNIQUE(student_id, quiz_id)
+);
+
+-- Individual Question Responses
+CREATE TABLE question_responses (
+    attempt_id UUID REFERENCES quiz_attempts(id),
+    question_id UUID REFERENCES questions(id),
+    selected_answer TEXT,
+    is_correct BOOLEAN,
+    PRIMARY KEY (attempt_id, question_id)
+);
+
+```
+
+**5.3 API Definitions (FastAPI Routes)**
+
+```# Note: Descriptions cover primary function. Specific request/response models (Pydantic) will be defined separately.
+
+# Authentication
+POST /api/auth/login                 # User login (teacher/student), returns access/refresh tokens
+POST /api/auth/refresh               # Refresh access token using refresh token
+POST /api/auth/logout                # User logout (requires authentication)
+
+# Quiz Management
+# Creates quiz metadata record, returns quiz_id and presigned S3 URL for PDF upload. 
+# Backend processing (LLM extraction) triggered post-upload (e.g., via S3 event or subsequent call).
+POST /api/quizzes/                   
+# List quizzes for the authenticated teacher.
+# Supports filtering via query parameters: ?standard=X&subject=Y&target_exam=Z&batch_name=A&topic=B&date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
+GET /api/quizzes/                   
+GET /api/quizzes/{quiz_id}           # Get specific quiz details (metadata, questions)
+PUT /api/quizzes/{quiz_id}           # Update quiz metadata and/or questions
+DELETE /api/quizzes/{quiz_id}        # Delete a quiz
+GET /api/quizzes/{quiz_id}/share     # Get the unique shareable link for a quiz
+
+# Question Management (within a specific quiz)
+POST /api/quizzes/{quiz_id}/questions # Add a new question to a quiz
+PUT /api/quizzes/{quiz_id}/questions/{question_id} # Update an existing question
+DELETE /api/quizzes/{quiz_id}/questions/{question_id} # Delete a question
+
+# Quiz Taking
+# Start quiz attempt. Requires student authentication OR accepts student_name/identifier for anonymous attempts (MVP: requires clarification/adjustment in schema/logic if supporting anonymous).
+POST /api/attempts/                   
+PUT /api/attempts/{attempt_id}       # Submit answers for an ongoing attempt
+GET /api/attempts/{attempt_id}       # Get results for a completed attempt (student view)
+
+# Teacher Dashboard & Submissions
+# Get submission status for a specific quiz (list of students shared with, status: Not Started/Submitted, basic score).
+GET /api/quizzes/{quiz_id}/submissions 
+
+# Analytics (Requires Teacher role)
+# Supports filtering via query parameters (e.g., ?subject=Y&topic=B&date_from=...&date_to=...)
+# Response structure should include aggregations and breakdowns by topic, difficulty, etc.
+GET /api/analytics/student/{student_id} # Get performance analytics for a specific student across quizzes
+GET /api/analytics/quiz/{quiz_id}       # Get aggregated analytics for a specific quiz
+GET /api/analytics/batch/{batch_name}   # Get aggregated analytics for a specific student batch
+
+# Export Functionality (Optional - requires Teacher role)
+# Supports filtering via query parameters similar to Analytics endpoints.
+GET /api/quizzes/{quiz_id}/export       # Export raw submission data for a quiz (e.g., CSV)
+GET /api/analytics/quiz/{quiz_id}/export    # Export aggregated analytics report for a quiz
+GET /api/analytics/batch/{batch_name}/export # Export aggregated analytics report for a batch
+```
+
+**5.4 Authentication/Security Mechanisms**
+
+JWT_SECRET_KEY = env("JWT_SECRET_KEY")
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+- **Security Measures**:
+- CORS middleware with specific origins
+- Rate limiting (100 requests/minute)
+- Password hashing using bcrypt
+- Input validation using Pydantic
+- S3 presigned URLs for secure file access
+
+**5.5 Third-party Dependencies**
+
+
+fastapi==0.68.0
+python-jose[cryptography]     # JWT
+passlib[bcrypt]              # Password hashing
+boto3                        # AWS S3
+sqlalchemy                   # Database ORM
+python-multipart            # File uploads
+pillow                      # Image processing
+pymysql                     # MySQL driver
+openai                       # Added for LLM interaction
+
+{
+  "dependencies": {
+    "next": "12.x",
+    "react": "17.x",
+    "tailwindcss": "^2.2.x",
+    "@headlessui/react": "^1.4.x",
+    "react-query": "^3.x",
+    "axios": "^0.21.x",
+    "jwt-decode": "^3.1.x"
+  }
+}
+
+## 6. Data Flow
+
+- **Data Models (Pydantic Models)**
+- **Data Processing Pipelines**
+    - **PDF Upload & Quiz Creation Pipeline**
+        
+        ```mermaid
+        graph TD
+            subgraph Teacher Interaction
+                A[Teacher logs in] --> B{Clicks 'Create New Quiz'};
+                B --> C[Enters Metadata (Standard, Subject, etc.)];
+                C --> D[Selects PDF file];
+            end
+        
+            subgraph API & Backend Initial Setup
+                D --> E[FE calls POST /api/quizzes/ with Metadata];
+                E --> F{BE: Create Quiz Metadata Record in DB};
+                F --> G[BE: Generate S3 Presigned URL];
+                G --> H{API Response: Returns quiz_id & presigned URL};
+            end
+        
+            subgraph File Upload
+                H --> I[FE uploads PDF to S3 using Presigned URL];
+            end
+        
+            subgraph Backend Processing
+                I --> J(S3 Upload Complete Event / Trigger);
+                J --> K{Trigger PDF Processing Service};
+                K --> L[LLM Client: Extract Text/Questions];
+                L --> M[LLM Client: Analyze Questions (Difficulty, Topic, etc.)];
+                M --> N{Structure to Internal Quiz Model};
+                N --> O[Store Extracted/Analyzed Data];
+            end
+        
+            subgraph Teacher Review & Finalization
+                O --> P{Quiz Ready for Review State};
+                P --> Q[Teacher navigates to Edit/Review Screen];
+                Q --> R{Teacher reviews/edits questions, answers, properties}; 
+                R --> S[Teacher Clicks 'Save'/'Finalize'];
+                S --> T[FE calls PUT /api/quizzes/{quiz_id} with Final Data];
+                T --> U{BE: Update Quiz & Questions in DB};
+                U --> V[BE calls GET /api/quizzes/{quiz_id}/share OR generates link];
+                V --> W[Store/Associate Shareable Link with Quiz];
+                W --> X{API Response: Success / Returns Link};
+            end
+        ```
+        
+    - **Quiz Attempt Pipeline**
+        
+        ```mermaid
+        graph TD
+            subgraph Student Interaction
+                A[Student clicks Shareable Link] --> B{Enters Name/ID or Logs In (Rule 11)};
+                B --> C[FE calls POST /api/attempts/];
+            end
+        
+            subgraph Attempt Setup
+                C --> D{BE: Validate Quiz & Student Info};
+                D --> E[BE: Create Quiz Attempt Record (start_time, student_id/name)];
+                E --> F{API Response: Returns attempt_id, Quiz Questions};
+            end
+        
+            subgraph Taking Quiz
+                F --> G[Student answers questions within Time Limit (Rule 12)];
+                G --> H[Student Clicks 'Submit'];
+            end
+        
+            subgraph Submission & Scoring
+                H --> I[FE calls PUT /api/attempts/{attempt_id} with Answers];
+                I --> J{BE: Record selected_answer for each question_response};
+                J --> K[BE: Calculate Score (compare answers)];
+                K --> L[BE: Update Quiz Attempt Record (end_time, score)];
+                L --> M{API Response: Submission Confirmation (Rule 13)};
+            end
+        
+            subgraph Post-Submission Data Usage
+                L --> N((Database: Attempts & Responses Stored));
+                N --> O{Analytics Engine Reads Data (for Analytics APIs)};
+                N --> P{Teacher Dashboard Reads Data (for Submission Status/Results APIs)};
+            end
+        ```
+        
+    - **Storage Solutions**
+        
+        ```sql
+        s3://quiz-app-bucket/
+        ├── quizzes/
+        │   ├── {quiz_id}/
+        │   │   ├── original.pdf
+        │   │   └── processed.json
+        ├── analytics/
+        │   ├── {batch_name}/
+        │   │   └── reports/
+        └── exports/
+            └── {yyyy-mm}/
+        ```
+        
+    - Database Partitioning Strategy (for future scaling)
+        - Quiz attempts table partitioned by month
+        - Analytics data partitioned by batch_name
+            
+            ```sql
+            -- Example partition for quiz_attempts
+            PARTITION BY RANGE (UNIX_TIMESTAMP(created_at)) (
+                PARTITION p_2024_01 VALUES LESS THAN (UNIX_TIMESTAMP('2024-02-01')),
+                PARTITION p_2024_02 VALUES LESS THAN (UNIX_TIMESTAMP('2024-03-01'))
+            );
+            ```
+            
+        
+- **Data Backup Strategy**
+    - Daily Backups
+        - Database dumps (MySQL)
+        - Incremental S3 backups
+        - Configuration files
